@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GT Automation Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* --- 1. DEFINIÇÕES BASE E VARIÁVEIS --- */
+        :root {
+            --gt-purple: #4F2683;
+            --transition-speed: 0.4s;
+            --font-main: 'Inter', sans-serif;
+        }
+
+        /* TEMA DIA (Light - Corporativo) */
+        [data-theme="light"] {
+            --bg-body: #F3F4F6;
+            --bg-sidebar: #FFFFFF;
+            --bg-card: #FFFFFF;
+            --text-primary: #1F2937;
+            --text-secondary: #6B7280;
+            --border-color: #E5E7EB;
+            --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            --btn-bg: #4F2683;
+            --btn-text: #ffffff;
+            --btn-shadow: 0 4px 6px rgba(79, 38, 131, 0.3);
+            --input-bg: #FFFFFF;
+            --radius-card: 12px;
+            --highlight: #4F2683;
+            --bg-decor: #F3F4F6;
+            
+            /* Loader Colors */
+            --loader-track: #E5E7EB;
+            --loader-fill: #4F2683;
+            --loader-glow: none;
+            --success-bg: #F0FDF4;
+            --success-text: #166534;
+        }
+
+        /* TEMA NOITE (Dark - Padrão) */
+        [data-theme="dark"] {
+            --bg-body: #111827;
+            --bg-sidebar: #1F2937;
+            --bg-card: #1F2937;
+            --text-primary: #F9FAFB;
+            --text-secondary: #9CA3AF;
+            --border-color: #374151;
+            --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            --btn-bg: #4F2683;
+            --btn-text: #ffffff;
+            --btn-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+            --input-bg: #111827;
+            --radius-card: 12px;
+            --highlight: #A78BFA;
+            --bg-decor: rgba(147, 51, 234, 0.15);
+            
+            /* Loader Colors */
+            --loader-track: #374151;
+            --loader-fill: #A78BFA;
+            --loader-glow: none;
+            --success-bg: rgba(22, 101, 52, 0.2);
+            --success-text: #4ade80;
+        }
+
+        /* TEMA TARDE (Neumorphism - Suave/Físico) */
+        [data-theme="neumorph"] {
+            --bg-body: #E0E5EC;
+            --bg-sidebar: #E0E5EC;
+            --bg-card: #E0E5EC;
+            --text-primary: #4A5568;
+            --text-secondary: #7A869A;
+            --border-color: transparent;
+            --shadow-card: 9px 9px 16px rgb(163,177,198,0.6), -9px -9px 16px rgba(255,255,255, 0.5);
+            --shadow-inset: inset 6px 6px 10px 0 rgba(163,177,198, 0.7), inset -6px -6px 10px 0 rgba(255,255,255, 0.8);
+            --btn-bg: #E0E5EC;
+            --btn-text: #4F2683;
+            --btn-shadow: 6px 6px 10px rgba(163,177,198, 0.6), -6px -6px 10px rgba(255,255,255, 0.8);
+            --input-bg: #E0E5EC;
+            --radius-card: 20px;
+            --highlight: #4F2683;
+            --bg-decor: rgba(255, 255, 255, 0.4);
+            
+            /* Loader Colors */
+            --loader-track: #CBD5E0;
+            --loader-fill: #4F2683;
+            --loader-glow: drop-shadow(2px 2px 4px rgba(163,177,198,0.5));
+            --success-bg: rgba(72, 187, 120, 0.1);
+            --success-text: #2F855A;
+        }
+
+        /* TEMA MADRUGADA (Cyberpunk - Neon/Glass) */
+        [data-theme="midnight"] {
+            --bg-body: #09090b; 
+            --bg-sidebar: #000000;
+            --bg-card: rgba(20, 20, 25, 0.6); 
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --border-color: rgba(139, 92, 246, 0.3);
+            --shadow-card: 0 0 0 1px rgba(139, 92, 246, 0.1), 0 0 20px rgba(0, 255, 242, 0.05);
+            --btn-bg: transparent;
+            --btn-text: #00fff2;
+            --btn-shadow: 0 0 10px rgba(0, 255, 242, 0.4), inset 0 0 10px rgba(0, 255, 242, 0.1);
+            --input-bg: rgba(0, 0, 0, 0.4);
+            --radius-card: 6px; 
+            --highlight: #bc13fe; 
+            --neon-glow: 0 0 10px #bc13fe, 0 0 20px #bc13fe;
+            --bg-decor: rgba(147, 51, 234, 0.2);
+            
+            /* Loader Colors */
+            --loader-track: rgba(255,255,255,0.1);
+            --loader-fill: #00fff2;
+            --loader-glow: drop-shadow(0 0 8px rgba(0, 255, 242, 0.8));
+            --success-bg: rgba(0, 255, 242, 0.1);
+            --success-text: #00fff2;
+        }
+
+        /* --- 2. ESTILOS GERAIS --- */
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            transition: background-color var(--transition-speed), color var(--transition-speed);
+        }
+
+        [data-theme="midnight"] body {
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(79, 38, 131, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(0, 255, 242, 0.08) 0%, transparent 40%);
+        }
+
+        aside, header, .nav-item { transition: all var(--transition-speed) ease; }
+
+        /* --- 3. CARDS E CONTAINERS --- */
+        .gt-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-card);
+            border-radius: var(--radius-card);
+            transition: all 0.3s ease;
+        }
+
+        [data-theme="neumorph"] .gt-card { border: none; }
+        [data-theme="neumorph"] aside, [data-theme="neumorph"] header { 
+            border: none; 
+            box-shadow: 5px 0 15px rgba(163,177,198, 0.2); 
+            z-index: 20;
+        }
+
+        [data-theme="midnight"] .gt-card {
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+        }
+        [data-theme="midnight"] aside { border-right: 1px solid rgba(255,255,255,0.1); }
+        [data-theme="midnight"] header { border-bottom: 1px solid rgba(255,255,255,0.1); }
+
+        /* --- 4. BOTÕES --- */
+        .btn-gt {
+            background-color: var(--btn-bg);
+            color: var(--btn-text);
+            box-shadow: var(--btn-shadow);
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+            border: none;
+        }
+        .btn-gt:hover { transform: translateY(-2px); filter: brightness(1.1); }
+        .btn-gt:active { transform: translateY(0); }
+        [data-theme="neumorph"] .btn-gt:active { box-shadow: var(--shadow-inset); transform: translateY(0); }
+        [data-theme="midnight"] .btn-gt { border: 1px solid #00fff2; text-shadow: 0 0 5px rgba(0, 255, 242, 0.8); }
+        [data-theme="midnight"] .btn-gt:hover { box-shadow: 0 0 20px rgba(0, 255, 242, 0.6); background: rgba(0, 255, 242, 0.1); }
+
+        /* Estilo Específico para o botão de sucesso */
+        .btn-success-action {
+            background-color: var(--success-text);
+            color: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        [data-theme="midnight"] .btn-success-action {
+            background-color: transparent;
+            border: 1px solid var(--success-text);
+            color: var(--success-text);
+            box-shadow: 0 0 15px var(--success-bg);
+        }
+        [data-theme="midnight"] .btn-success-action:hover {
+            background-color: var(--success-bg);
+            box-shadow: 0 0 25px var(--success-text);
+        }
+
+        /* --- 5. INPUTS --- */
+        .input-box {
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        [data-theme="neumorph"] .input-box { border: none; box-shadow: var(--shadow-inset); }
+        [data-theme="midnight"] .input-box { border-color: rgba(255,255,255,0.1); }
+        [data-theme="midnight"] .input-box:focus-within { border-color: #bc13fe; box-shadow: 0 0 10px rgba(188, 19, 254, 0.3); }
+
+        /* --- 6. MENU DE TEMAS --- */
+        .theme-wrapper { position: relative; display: flex; align-items: center; height: 50px; }
+        .theme-trigger {
+            width: 40px; height: 40px; border-radius: 50%; background: var(--bg-card); border: 1px solid var(--border-color);
+            display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 50; transition: all 0.3s; color: var(--text-secondary);
+        }
+        [data-theme="neumorph"] .theme-trigger { border: none; box-shadow: 5px 5px 10px rgba(163,177,198,0.6), -5px -5px 10px rgba(255,255,255,0.8); }
+        [data-theme="midnight"] .theme-trigger { border-color: #bc13fe; color: #bc13fe; box-shadow: 0 0 10px rgba(188, 19, 254, 0.4); }
+        .theme-menu {
+            position: absolute; right: 0; top: 0; height: 40px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 30px;
+            display: flex; align-items: center; padding-right: 50px; padding-left: 10px; gap: 8px; opacity: 0; transform: scale(0.8);
+            transform-origin: right center; pointer-events: none; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .theme-wrapper:hover .theme-menu { opacity: 1; transform: scale(1); pointer-events: all; }
+        [data-theme="neumorph"] .theme-menu { border: none; box-shadow: 5px 5px 10px rgba(163,177,198,0.6), -5px -5px 10px rgba(255,255,255,0.8); }
+        [data-theme="midnight"] .theme-menu { background: rgba(10, 10, 10, 0.9); border: 1px solid rgba(188, 19, 254, 0.3); box-shadow: 0 0 20px rgba(188, 19, 254, 0.2); }
+        .theme-opt { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s; font-size: 0.8rem; }
+        .theme-opt:hover { transform: scale(1.2); }
+        .theme-opt.active { background: var(--highlight); color: white; box-shadow: 0 0 10px var(--highlight); }
+
+        /* --- 7. LOADER INFINITO E SUCCESS STATE --- */
+        .infinity-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .infinity-container.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .infinity-path {
+            fill: none;
+            stroke-width: 4;
+            stroke-linecap: round;
+        }
+
+        .path-track {
+            stroke: var(--loader-track);
+        }
+
+        .path-moving {
+            stroke: var(--loader-fill);
+            stroke-dasharray: 20 100;
+            stroke-dashoffset: 0;
+            animation: dash 1.5s linear infinite;
+            filter: var(--loader-glow);
+        }
+
+        @keyframes dash {
+            0% { stroke-dashoffset: 0; }
+            100% { stroke-dashoffset: -260; } /* Ajustado para o comprimento do path */
+        }
+
+        .loader-text-group {
+            text-align: center;
+            margin-top: 15px;
+        }
+        
+        .loader-pct {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--highlight);
+            line-height: 1;
+            margin-bottom: 5px;
+            font-feature-settings: "tnum";
+            font-variant-numeric: tabular-nums;
+        }
+        [data-theme="midnight"] .loader-pct {
+            text-shadow: 0 0 15px var(--highlight);
+        }
+
+        .loader-status {
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-primary);
+        }
+        
+        .loader-detail {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            height: 1.2em;
+        }
+
+        /* Success Animation Elements */
+        .success-icon-wrapper {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: var(--success-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .success-icon {
+            font-size: 40px;
+            color: var(--success-text);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden">
+
+    <!-- SIDEBAR -->
+    <aside class="w-64 flex flex-col z-20 border-r border-transparent">
+        <div class="h-20 flex items-center px-6">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xl shadow-lg transition-transform hover:rotate-6"
+                 style="background: var(--gt-purple); color: white;">
+                GT
+            </div>
+            <div class="ml-3">
+                <h1 class="font-bold leading-tight" style="color: var(--text-primary)">Automation</h1>
+                <p class="text-xs opacity-70" style="color: var(--text-secondary)">Hub Central v5.0</p>
+            </div>
+        </div>
+
+        <nav class="flex-1 py-6 px-4 space-y-2">
+            <button onclick="Router.nav('home')" class="nav-item w-full flex items-center px-3 py-3 text-sm font-medium rounded-lg active transition-all" id="nav-home">
+                <i class="fas fa-home w-8 text-center"></i> Início
+            </button>
+            
+            <div class="pt-4 pb-2 px-3 text-xs font-bold uppercase tracking-widest opacity-50" style="color: var(--text-secondary)">
+                Apps
+            </div>
+
+            <button onclick="Router.nav('matriz')" class="nav-item w-full flex items-center px-3 py-3 text-sm font-medium rounded-lg transition-all" id="nav-matriz">
+                <i class="fas fa-file-contract w-8 text-center"></i> Matriz
+            </button>
+            
+            <button class="nav-item w-full flex items-center px-3 py-3 text-sm font-medium rounded-lg opacity-50 cursor-not-allowed">
+                <i class="fas fa-chart-line w-8 text-center"></i> Financeiro
+            </button>
+        </nav>
+
+        <div class="p-4">
+            <button onclick="pywebview.api.fechar_app()" class="flex items-center text-sm w-full px-2 py-2 rounded hover:text-red-500 transition-colors" style="color: var(--text-secondary)">
+                <i class="fas fa-power-off w-8"></i> Sair
+            </button>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 flex flex-col relative overflow-hidden">
+        
+        <!-- HEADER -->
+        <header class="h-20 flex items-center justify-between px-8 z-10">
+            <h2 id="page-title" class="text-2xl font-bold tracking-tight" style="color: var(--text-primary)">Visão Geral</h2>
+            
+            <div class="flex items-center gap-6">
+                <!-- THEME SWITCHER -->
+                <div class="theme-wrapper">
+                    <!-- O Menu que aparece -->
+                    <div class="theme-menu">
+                        <div class="theme-opt" onclick="Theme.set('light')" title="Dia"><i class="fas fa-sun text-yellow-500"></i></div>
+                        <div class="theme-opt" onclick="Theme.set('neumorph')" title="Tarde"><i class="fas fa-cloud text-gray-400"></i></div>
+                        <div class="theme-opt" onclick="Theme.set('dark')" title="Noite"><i class="fas fa-moon text-blue-300"></i></div>
+                        <div class="theme-opt" onclick="Theme.set('midnight')" title="Madrugada"><i class="fas fa-star text-purple-400"></i></div>
+                    </div>
+                    <!-- O Gatilho -->
+                    <div class="theme-trigger">
+                        <i class="fas fa-palette"></i>
+                    </div>
+                </div>
+
+                <!-- User Info -->
+                <div class="flex items-center gap-3 pl-4 border-l border-gray-200 dark:border-gray-700" style="border-color: var(--border-color)">
+                    <div class="text-right hidden sm:block">
+                        <p class="text-sm font-bold" style="color: var(--text-primary)">Admin</p>
+                        <p class="text-xs opacity-70" style="color: var(--text-secondary)">Grant Thornton</p>
+                    </div>
+                    <div class="w-10 h-10 rounded-full flex items-center justify-center border shadow-sm" style="background: var(--bg-card); border-color: var(--border-color)">
+                        <i class="fas fa-user" style="color: var(--text-secondary)"></i>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- VIEWS -->
+        <div class="flex-1 overflow-y-auto p-8 relative">
+            
+            <!-- HOME VIEW -->
+            <div id="view-home" class="view-section active max-w-6xl mx-auto space-y-8">
+                <!-- Banner Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="gt-card p-6 border-l-4 border-purple-600">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-bold uppercase opacity-60">Contratos</p>
+                                <h3 class="text-3xl font-bold mt-1">1,240</h3>
+                            </div>
+                            <i class="fas fa-file-signature text-2xl text-purple-600 opacity-50"></i>
+                        </div>
+                    </div>
+                    <div class="gt-card p-6 border-l-4 border-cyan-500">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-bold uppercase opacity-60">Tempo Salvo</p>
+                                <h3 class="text-3xl font-bold mt-1">320h</h3>
+                            </div>
+                            <i class="fas fa-clock text-2xl text-cyan-500 opacity-50"></i>
+                        </div>
+                    </div>
+                    <div class="gt-card p-6 border-l-4 border-green-500">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-xs font-bold uppercase opacity-60">Status</p>
+                                <h3 class="text-xl font-bold mt-2 text-green-500">Online</h3>
+                            </div>
+                            <i class="fas fa-server text-2xl text-green-500 opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shortcuts -->
+                <h3 class="text-lg font-bold opacity-80 mt-8">Acesso Rápido</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div onclick="Router.nav('matriz')" class="gt-card p-8 cursor-pointer hover:scale-[1.02] transition-transform group relative overflow-hidden">
+                        <div class="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-purple-500 opacity-10 group-hover:scale-150 transition-transform duration-500"></div>
+                        <div class="flex items-center gap-4">
+                            <div class="w-14 h-14 rounded-xl flex items-center justify-center text-2xl" style="background: rgba(79, 38, 131, 0.1); color: var(--gt-purple);">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-xl font-bold">Matriz de Filtragem</h4>
+                                <p class="text-sm opacity-60 mt-1">Automação Excel para Word em massa.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MATRIZ VIEW -->
+            <div id="view-matriz" class="view-section hidden max-w-4xl mx-auto">
+                <div class="gt-card p-10 relative overflow-hidden min-h-[500px] flex flex-col">
+                    <!-- Decorativo Dinâmico -->
+                    <div class="absolute top-0 right-0 w-96 h-96 blur-[120px] pointer-events-none rounded-full transition-colors duration-500"
+                         style="background-color: var(--bg-decor)"></div>
+
+                    <div class="flex justify-between items-center mb-8 relative z-10">
+                        <h3 class="text-2xl font-bold flex items-center gap-3">
+                            <span class="w-10 h-10 rounded-lg flex items-center justify-center bg-purple-600 text-white text-sm"><i class="fas fa-bolt"></i></span>
+                            Automação
+                        </h3>
+                        <button onclick="Router.nav('home')" class="text-sm font-bold opacity-60 hover:opacity-100 hover:text-purple-500 transition-colors">
+                            <i class="fas fa-arrow-left"></i> Voltar
+                        </button>
+                    </div>
+
+                    <!-- AREA DE INPUT (Some quando roda) -->
+                    <div id="input-area" class="space-y-6 relative z-10 transition-all duration-500">
+                        <!-- Excel -->
+                        <div>
+                            <label class="text-xs font-bold uppercase opacity-50 tracking-wider">Fonte de Dados</label>
+                            <div class="flex gap-4 mt-2">
+                                <div class="input-box flex-1 h-12 flex items-center px-4 gap-3">
+                                    <i class="fas fa-table text-green-500"></i>
+                                    <span id="file-excel" class="text-sm font-medium truncate opacity-80">Selecione o arquivo Excel...</span>
+                                </div>
+                                <button onclick="App.select('excel')" class="btn-gt px-6 h-12 flex items-center gap-2">
+                                    <i class="fas fa-folder-open"></i> <span class="hidden sm:inline">Buscar</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Word -->
+                        <div>
+                            <label class="text-xs font-bold uppercase opacity-50 tracking-wider">Modelo</label>
+                            <div class="flex gap-4 mt-2">
+                                <div class="input-box flex-1 h-12 flex items-center px-4 gap-3">
+                                    <i class="fas fa-file-word text-blue-500"></i>
+                                    <span id="file-word" class="text-sm font-medium truncate opacity-80">Selecione o modelo Word...</span>
+                                </div>
+                                <button onclick="App.select('word')" class="btn-gt px-6 h-12 flex items-center gap-2">
+                                    <i class="fas fa-folder-open"></i> <span class="hidden sm:inline">Buscar</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Folder -->
+                        <div>
+                            <label class="text-xs font-bold uppercase opacity-50 tracking-wider">Saída</label>
+                            <div class="flex gap-4 mt-2">
+                                <div class="input-box flex-1 h-12 flex items-center px-4 gap-3">
+                                    <i class="fas fa-folder text-yellow-500"></i>
+                                    <span id="file-folder" class="text-sm font-medium truncate opacity-80">Selecione a pasta de destino...</span>
+                                </div>
+                                <button onclick="App.selectFolder()" class="btn-gt px-6 h-12 flex items-center gap-2">
+                                    <i class="fas fa-folder-open"></i> <span class="hidden sm:inline">Definir</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mt-10 pt-8 border-t border-dashed" style="border-color: var(--border-color)">
+                            <button id="btn-run" onclick="App.run()" class="btn-gt w-full h-14 text-lg uppercase tracking-widest flex items-center justify-center gap-3 shadow-lg">
+                                <i class="fas fa-play"></i> Iniciar Processamento
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- NOVO LOADER INFINITO (Aparece quando roda) -->
+                    <div id="loader-area" class="infinity-container absolute inset-0 z-20 bg-card hidden">
+                        <!-- CONTAINER DE ANIMAÇÃO -->
+                        <div id="anim-wrapper" class="transition-all duration-500">
+                             <!-- SVG Infinity -->
+                            <svg id="svg-infinity" width="120" height="60" viewBox="0 0 120 60" class="mb-4">
+                                <path class="infinity-path path-track" 
+                                      d="M30,30 C10,30 10,50 30,50 C50,50 50,30 70,30 C90,30 90,50 110,50 C130,50 130,30 110,30 C90,30 90,50 70,50 C50,50 50,30 30,30 Z" 
+                                      transform="translate(-10, -10) scale(1)"/>
+                                
+                                <path class="infinity-path path-moving" 
+                                      d="M30,30 C10,30 10,50 30,50 C50,50 50,30 70,30 C90,30 90,50 110,50 C130,50 130,30 110,30 C90,30 90,50 70,50 C50,50 50,30 30,30 Z" 
+                                      transform="translate(-10, -10) scale(1)"/>
+                            </svg>
+                            
+                            <!-- Success Icon (Oculto inicialmente) -->
+                            <div id="icon-success" class="hidden flex flex-col items-center">
+                                <div class="success-icon-wrapper">
+                                    <i class="fas fa-check success-icon"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="loader-text-group">
+                            <div id="loader-pct" class="loader-pct">0%</div>
+                            <div id="loader-msg" class="loader-status">Iniciando</div>
+                            <div id="loader-detail" class="loader-detail">Preparando arquivos...</div>
+                            
+                            <!-- BOTÕES DE AÇÃO (Ocultos inicialmente) -->
+                            <div id="success-actions" class="hidden mt-6 flex flex-col gap-3 w-full max-w-xs animate-[fadeIn_0.5s_ease-out]">
+                                <button onclick="App.openFolder()" class="btn-gt btn-success-action w-full h-12 flex items-center justify-center gap-2 font-bold uppercase text-sm tracking-wide">
+                                    <i class="fas fa-folder-open"></i> Abrir Pasta
+                                </button>
+                                <button onclick="App.reset()" class="text-sm font-bold opacity-50 hover:opacity-100 transition-opacity" style="color: var(--text-primary)">
+                                    <i class="fas fa-redo"></i> Novo Processo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // --- 1. THEME LOGIC ---
+        const Theme = {
+            set: (name) => {
+                document.documentElement.setAttribute('data-theme', name);
+                document.querySelectorAll('.theme-opt').forEach(el => el.classList.remove('active'));
+                const activeBtn = document.querySelector(`.theme-opt[onclick*="${name}"]`);
+                if(activeBtn) activeBtn.classList.add('active');
+            }
+        };
+
+        // --- 2. ROUTER LOGIC ---
+        const Router = {
+            nav: (id) => {
+                document.querySelectorAll('.nav-item').forEach(el => {
+                    el.classList.remove('active', 'bg-gray-100', 'text-purple-700');
+                    el.style.backgroundColor = 'transparent';
+                    el.style.color = 'var(--text-secondary)';
+                });
+                
+                const btn = document.getElementById(`nav-${id}`);
+                if(btn) {
+                    btn.style.backgroundColor = 'rgba(120,120,120,0.1)';
+                    btn.style.color = 'var(--highlight)';
+                }
+
+                document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+                const view = document.getElementById(`view-${id}`);
+                view.classList.remove('hidden');
+                
+                view.style.opacity = 0;
+                view.style.transform = 'translateY(10px)';
+                setTimeout(() => {
+                    view.style.transition = 'all 0.4s ease';
+                    view.style.opacity = 1;
+                    view.style.transform = 'translateY(0)';
+                }, 50);
+
+                document.getElementById('page-title').innerText = id === 'home' ? 'Visão Geral' : 'Matriz de Filtragem';
+            }
+        };
+
+        // --- 3. APP LOGIC (MOCK + PYWEBVIEW) ---
+        const App = {
+            select: async (type) => {
+                if(window.pywebview) {
+                    const res = await window.pywebview.api.selecionar_arquivo('matriz', type);
+                    if(res) App.updateUI(type, res);
+                } else {
+                    App.updateUI(type, `mock_${type}_file.ext`);
+                }
+            },
+            selectFolder: async () => {
+                if(window.pywebview) {
+                    const res = await window.pywebview.api.selecionar_pasta('matriz');
+                    if(res) App.updateUI('folder', res);
+                } else {
+                    App.updateUI('folder', `C:/Mock/Path/Output`);
+                }
+            },
+            updateUI: (id, text) => {
+                const el = document.getElementById(`file-${id}`);
+                el.innerText = text;
+                el.style.color = 'var(--highlight)';
+                el.style.fontWeight = 'bold';
+                el.style.opacity = '1';
+            },
+            run: async () => {
+                // UI Reset
+                document.getElementById('svg-infinity').classList.remove('hidden');
+                document.getElementById('icon-success').classList.add('hidden');
+                document.getElementById('success-actions').classList.add('hidden');
+                document.getElementById('loader-pct').style.display = 'block'; // Mostra %
+
+                // Alterna UI para modo Loading
+                document.getElementById('input-area').style.opacity = 0;
+                setTimeout(() => {
+                    document.getElementById('input-area').classList.add('hidden');
+                    const loader = document.getElementById('loader-area');
+                    loader.classList.remove('hidden');
+                    setTimeout(() => loader.classList.add('active'), 50);
+                }, 300);
+
+                if(window.pywebview) {
+                    const res = await window.pywebview.api.iniciar_matriz();
+                    if(res.status === 'error') alert(res.message);
+                } else {
+                    // Mock Run
+                    App.mockProcess();
+                }
+            },
+            // Função Mock para simular o processo
+            mockProcess: () => {
+                let p = 0;
+                const interval = setInterval(() => {
+                    p += 1;
+                    App.updateProgress(p, p < 50 ? 'Lendo Excel' : 'Gerando Documentos');
+                    
+                    if(p >= 100) {
+                        clearInterval(interval);
+                        App.finishSuccess("Relatorio_Final_Mock.docx");
+                    }
+                }, 50);
+            },
+            openFolder: () => {
+                if(window.pywebview) {
+                    window.pywebview.api.abrir_pasta_saida();
+                } else {
+                    alert('Abrindo pasta no explorador de arquivos (Simulação)');
+                }
+            },
+            reset: () => {
+                 const loader = document.getElementById('loader-area');
+                 loader.classList.remove('active');
+                 setTimeout(() => {
+                     loader.classList.add('hidden');
+                     const inputArea = document.getElementById('input-area');
+                     inputArea.classList.remove('hidden');
+                     setTimeout(() => inputArea.style.opacity = 1, 50);
+                     
+                     // Reset inputs visualmente
+                     document.getElementById('loader-pct').innerText = '0%';
+                     document.getElementById('loader-msg').innerText = 'Aguardando';
+                 }, 300);
+            },
+            // Callbacks from Python
+            setLoading: (bool) => { 
+                // Já tratado no run
+            },
+            updateProgress: (val, msg) => {
+                document.getElementById('loader-pct').innerText = val + '%';
+                document.getElementById('loader-msg').innerText = val === 100 ? 'FINALIZANDO' : 'PROCESSANDO';
+                document.getElementById('loader-detail').innerText = msg;
+            },
+            finishSuccess: (filename) => {
+                 // 1. Muda texto
+                 document.getElementById('loader-msg').innerText = 'SUCESSO';
+                 document.getElementById('loader-detail').innerText = `Arquivo gerado: ${filename}`;
+                 document.getElementById('loader-pct').style.display = 'none'; // Esconde %
+
+                 // 2. Troca Animação por Ícone de Sucesso
+                 document.getElementById('svg-infinity').classList.add('hidden');
+                 document.getElementById('icon-success').classList.remove('hidden');
+                 
+                 // 3. Mostra botões de ação
+                 document.getElementById('success-actions').classList.remove('hidden');
+            },
+            showError: (msg) => {
+                alert('Erro: ' + msg);
+                App.reset();
+            }
+        };
+
+        // Init
+        Router.nav('home');
+    </script>
+</body>
+</html>
