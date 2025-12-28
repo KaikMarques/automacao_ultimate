@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GT Automation</title>
+    <!-- Tailwind CSS (Estilos) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Ícones (Font Awesome) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Fonte Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #E6E9EF;
+            --gt-purple: #4F2683;
+            --text-color: #4A4A4A;
+            --shadow-light: #ffffff;
+            --shadow-dark: #C4C9D6;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Inter', sans-serif;
+            user-select: none; /* Impede seleção de texto como num app nativo */
+            overflow: hidden;
+        }
+
+        /* --- ESTILOS NEUMORFISMO --- */
+        
+        /* Painel Elevado (Flat) - Para containers */
+        .neu-flat {
+            background: var(--bg-color);
+            box-shadow: 8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light);
+            border-radius: 20px;
+        }
+
+        /* Elemento Pressionado (Inset) - Para inputs e áreas de texto */
+        .neu-pressed {
+            background: var(--bg-color);
+            box-shadow: inset 5px 5px 10px var(--shadow-dark), inset -5px -5px 10px var(--shadow-light);
+            border-radius: 12px;
+        }
+
+        /* Botões */
+        .neu-btn {
+            background: var(--bg-color);
+            box-shadow: 6px 6px 12px var(--shadow-dark), -6px -6px 12px var(--shadow-light);
+            color: var(--gt-purple);
+            border-radius: 12px;
+            transition: all 0.2s ease;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .neu-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            color: #6b3fa0;
+        }
+        
+        .neu-btn:active:not(:disabled) {
+            box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+            transform: translateY(0);
+        }
+
+        .neu-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            box-shadow: none;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        /* Botão Primário (Roxo com gradiente) */
+        .neu-btn-primary {
+            background: linear-gradient(145deg, #5c2c99, #472276);
+            color: white;
+            box-shadow: 6px 6px 12px #a3aab9, -6px -6px 12px #ffffff;
+        }
+        .neu-btn-primary:hover:not(:disabled) {
+            color: white;
+            background: linear-gradient(145deg, #472276, #5c2c99);
+        }
+
+        /* Barra de Progresso Customizada */
+        .progress-container {
+            width: 100%;
+            height: 12px;
+            border-radius: 6px;
+            background: var(--bg-color);
+            box-shadow: inset 3px 3px 6px var(--shadow-dark), inset -3px -3px 6px var(--shadow-light);
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4F2683, #8E44AD);
+            border-radius: 6px;
+            transition: width 0.4s ease;
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen p-6">
+
+    <!-- Cabeçalho -->
+    <header class="flex items-center gap-4 mb-8 pl-2">
+        <div class="w-12 h-12 rounded-full neu-flat flex items-center justify-center text-xl font-bold text-[#4F2683]">
+            GT
+        </div>
+        <div>
+            <h1 class="text-2xl font-bold text-[#4F2683]">Automação de Contratos</h1>
+            <p class="text-xs text-gray-500 font-medium">Excel para Word • v2.0</p>
+        </div>
+    </header>
+
+    <!-- Formulário Principal -->
+    <main class="flex-1 flex flex-col gap-6 max-w-2xl mx-auto w-full">
+        
+        <!-- Passo 1: Selecionar Excel -->
+        <div class="neu-flat p-6 flex flex-col md:flex-row items-center gap-4">
+            <div class="w-10 h-10 rounded-full bg-green-100 text-green-700 flex items-center justify-center shrink-0">
+                <i class="fas fa-file-excel"></i>
+            </div>
+            <div class="flex-1 w-full">
+                <label class="text-xs font-bold text-gray-400 uppercase ml-1">Base de Dados (Excel)</label>
+                <div class="neu-pressed px-4 py-3 mt-1 text-sm text-gray-600 truncate h-11 flex items-center" id="text-excel">
+                    Nenhum arquivo selecionado
+                </div>
+            </div>
+            <button onclick="selectFile('excel')" class="neu-btn px-6 py-2 h-10 mt-5 w-full md:w-auto">
+                Selecionar
+            </button>
+        </div>
+
+        <!-- Passo 2: Selecionar Word -->
+        <div class="neu-flat p-6 flex flex-col md:flex-row items-center gap-4">
+            <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                <i class="fas fa-file-word"></i>
+            </div>
+            <div class="flex-1 w-full">
+                <label class="text-xs font-bold text-gray-400 uppercase ml-1">Modelo (Word)</label>
+                <div class="neu-pressed px-4 py-3 mt-1 text-sm text-gray-600 truncate h-11 flex items-center" id="text-word">
+                    Nenhum arquivo selecionado
+                </div>
+            </div>
+            <button onclick="selectFile('word')" class="neu-btn px-6 py-2 h-10 mt-5 w-full md:w-auto">
+                Selecionar
+            </button>
+        </div>
+
+        <!-- Passo 3: Selecionar Pasta de Saída -->
+        <div class="neu-flat p-6 flex flex-col md:flex-row items-center gap-4">
+            <div class="w-10 h-10 rounded-full bg-yellow-100 text-yellow-700 flex items-center justify-center shrink-0">
+                <i class="fas fa-folder-open"></i>
+            </div>
+            <div class="flex-1 w-full">
+                <label class="text-xs font-bold text-gray-400 uppercase ml-1">Salvar em</label>
+                <div class="neu-pressed px-4 py-3 mt-1 text-sm text-gray-600 truncate h-11 flex items-center" id="text-folder">
+                    Nenhuma pasta selecionada
+                </div>
+            </div>
+            <button onclick="selectFolder()" class="neu-btn px-6 py-2 h-10 mt-5 w-full md:w-auto">
+                Definir
+            </button>
+        </div>
+
+        <!-- Botão Executar e Status -->
+        <div class="mt-4">
+            <button id="btn-run" onclick="runAutomation()" class="neu-btn neu-btn-primary w-full py-4 text-lg rounded-xl flex justify-center items-center shadow-lg transition-transform transform active:scale-95">
+                <i class="fas fa-rocket mr-2"></i> Iniciar Automação
+            </button>
+
+            <!-- Área de Progresso (Invisível inicialmente) -->
+            <div id="status-area" class="mt-6 opacity-0 transition-opacity duration-500">
+                <div class="flex justify-between items-end mb-1">
+                    <span id="status-text" class="text-sm font-bold text-[#4F2683]">Preparando...</span>
+                    <span id="status-percent" class="text-xs font-bold text-gray-500">0%</span>
+                </div>
+                <div class="progress-container">
+                    <div id="progress-bar" class="progress-bar"></div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Lógica JavaScript que Conversa com o Python -->
+    <script>
+        // --- Funções chamadas pelo clique do usuário ---
+        
+        async function selectFile(type) {
+            // Chama a função Python 'selecionar_arquivo'
+            // 'window.pywebview.api' é a ponte mágica
+            const fileName = await window.pywebview.api.selecionar_arquivo(type);
+            
+            if (fileName) {
+                // Atualiza o texto na tela
+                const el = document.getElementById(`text-${type}`);
+                el.innerText = fileName;
+                el.style.color = "#4F2683";
+                el.style.fontWeight = "bold";
+            }
+        }
+
+        async function selectFolder() {
+            const folderName = await window.pywebview.api.selecionar_pasta();
+            if (folderName) {
+                const el = document.getElementById('text-folder');
+                el.innerText = folderName;
+                el.style.color = "#4F2683";
+                el.style.fontWeight = "bold";
+            }
+        }
+
+        async function runAutomation() {
+            // Tenta iniciar a automação no Python
+            const response = await window.pywebview.api.iniciar_automacao();
+            
+            if (response.status === 'error') {
+                alert(response.message);
+            }
+            // Se der tudo certo, o Python vai chamar 'iniciarLoading()' automaticamente
+        }
+
+        // --- Funções chamadas PELO Python (Callbacks) ---
+
+        function iniciarLoading() {
+            // Trava os botões para não clicar duas vezes
+            document.querySelectorAll('button').forEach(b => b.disabled = true);
+            
+            // Muda o texto do botão principal
+            const btnRun = document.getElementById('btn-run');
+            btnRun.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i> Processando...';
+            
+            // Mostra a barra de progresso
+            document.getElementById('status-area').style.opacity = '1';
+        }
+
+        function atualizarProgresso(porcentagem, texto) {
+            document.getElementById('progress-bar').style.width = porcentagem + '%';
+            document.getElementById('status-text').innerText = texto;
+            document.getElementById('status-percent').innerText = porcentagem + '%';
+        }
+
+        function finalizarSucesso(arquivoFinal) {
+            atualizarProgresso(100, "Concluído!");
+            
+            setTimeout(() => {
+                alert(`Sucesso! Arquivo salvo como: \n${arquivoFinal}`);
+                
+                // Reseta a interface para nova execução
+                document.querySelectorAll('button').forEach(b => b.disabled = false);
+                document.getElementById('btn-run').innerHTML = '<i class="fas fa-rocket mr-2"></i> Iniciar Automação';
+                document.getElementById('status-area').style.opacity = '0';
+                document.getElementById('progress-bar').style.width = '0%';
+            }, 500);
+        }
+
+        function mostrarErro(msg) {
+            alert("Erro durante o processo:\n" + msg);
+            
+            // Destrava a interface
+            document.querySelectorAll('button').forEach(b => b.disabled = false);
+            document.getElementById('btn-run').innerHTML = '<i class="fas fa-rocket mr-2"></i> Tentar Novamente';
+        }
+    </script>
+</body>
+</html>
