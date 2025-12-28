@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Experiência de Carregamento Imersiva</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; /* Slate 900 fallback */
+            overflow: hidden; /* Impede scroll durante o loading */
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Efeito de brilho suave no texto */
+        .glow-text {
+            text-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+        }
+
+        /* Animação personalizada para o círculo de progresso */
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        
+        /* Fade in suave para o conteúdo final */
+        .fade-in {
+            animation: fadeIn 1s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-white h-screen w-screen relative">
+
+    <!-- Canvas para Partículas de Fundo -->
+    <canvas id="particleCanvas" class="absolute inset-0 z-0 pointer-events-none"></canvas>
+
+    <!-- Camada de Vinheta para foco central -->
+    <div class="absolute inset-0 z-0 bg-radial-gradient from-transparent to-slate-950 opacity-80 pointer-events-none"></div>
+
+    <!-- Container Central do Loading -->
+    <div id="loaderContainer" class="relative z-10 flex flex-col items-center justify-center h-full w-full transition-opacity duration-700">
+        
+        <!-- O Núcleo do Loader -->
+        <div class="relative mb-12 group">
+            <!-- Efeito de brilho de fundo (Blur) -->
+            <div class="absolute -inset-4 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-full opacity-20 blur-2xl group-hover:opacity-30 transition-opacity duration-500 animate-pulse"></div>
+            
+            <!-- SVG do Anel de Progresso -->
+            <div class="relative w-40 h-40">
+                <svg class="w-full h-full" viewBox="0 0 100 100">
+                    <!-- Trilha de fundo -->
+                    <circle 
+                        class="text-slate-800 stroke-current" 
+                        stroke-width="4" 
+                        cx="50" 
+                        cy="50" 
+                        r="45" 
+                        fill="transparent"
+                    ></circle>
+                    <!-- Barra de progresso -->
+                    <circle 
+                        id="progressCircle"
+                        class="text-cyan-400 stroke-current progress-ring__circle drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]" 
+                        stroke-width="4" 
+                        stroke-linecap="round"
+                        cx="50" 
+                        cy="50" 
+                        r="45" 
+                        fill="transparent" 
+                        stroke-dasharray="282.743" 
+                        stroke-dashoffset="282.743"
+                    ></circle>
+                </svg>
+
+                <!-- Percentual Central -->
+                <div class="absolute inset-0 flex items-center justify-center flex-col">
+                    <span id="percentageText" class="text-3xl font-bold font-mono text-white tracking-tighter">0%</span>
+                    <div class="h-1 w-1 bg-purple-500 rounded-full mt-2 animate-ping"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Texto de Status Dinâmico -->
+        <div class="text-center h-16">
+            <p id="statusText" class="text-lg text-slate-300 font-light tracking-wide glow-text">Inicializando sistema...</p>
+            <p class="text-xs text-slate-500 font-mono mt-2 uppercase tracking-widest">Process ID: <span id="processId">X9-204</span></p>
+        </div>
+
+        <!-- Barra decorativa inferior -->
+        <div class="mt-8 w-64 h-1 bg-slate-800 rounded-full overflow-hidden relative">
+            <div id="bottomBar" class="absolute left-0 top-0 h-full bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 w-0 transition-all duration-300"></div>
+        </div>
+    </div>
+
+    <!-- Conteúdo da "App" (Escondido inicialmente) -->
+    <div id="appContent" class="hidden relative z-10 flex flex-col items-center justify-center h-full w-full">
+        <div class="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 p-12 rounded-3xl shadow-2xl text-center max-w-md mx-4 fade-in">
+            <div class="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+            <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400 mb-4">Bem-vindo</h1>
+            <p class="text-slate-400 mb-8 leading-relaxed">O ambiente foi carregado com sucesso. Todos os módulos estão operacionais e prontos para uso.</p>
+            <button onclick="window.location.reload()" class="px-8 py-3 bg-white text-slate-900 rounded-full font-semibold hover:bg-cyan-50 hover:scale-105 transition-all duration-300 shadow-[0_0_20px_rgba(255,255,255,0.3)]">
+                Reiniciar Experiência
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. Configuração do Canvas (Partículas de Fundo) ---
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let particles = [];
+        let mouse = { x: null, y: null };
+
+        // Ajusta tamanho do canvas
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Rastreamento do Mouse
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.x;
+            mouse.y = e.y;
+        });
+
+        // Classe da Partícula
+        class Particle {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vx = (Math.random() - 0.5) * 0.5;
+                this.vy = (Math.random() - 0.5) * 0.5;
+                this.size = Math.random() * 2 + 0.5;
+                this.baseColor = Math.random() > 0.5 ? 'cyan' : 'purple';
+                this.alpha = Math.random() * 0.5 + 0.1;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Rebater nas bordas
+                if (this.x < 0 || this.x > width) this.vx *= -1;
+                if (this.y < 0 || this.y > height) this.vy *= -1;
+
+                // Interação com o mouse (atração suave)
+                if (mouse.x != null) {
+                    let dx = mouse.x - this.x;
+                    let dy = mouse.y - this.y;
+                    let distance = Math.sqrt(dx * dx + dy * dy);
+                    const forceDirectionX = dx / distance;
+                    const forceDirectionY = dy / distance;
+                    const maxDistance = 200;
+                    
+                    if (distance < maxDistance) {
+                        const force = (maxDistance - distance) / maxDistance;
+                        const directionX = forceDirectionX * force * 0.5; // Força de atração
+                        const directionY = forceDirectionY * force * 0.5;
+                        this.vx += directionX;
+                        this.vy += directionY;
+                    }
+                }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                
+                // Cor baseada no tema
+                if (this.baseColor === 'cyan') {
+                    ctx.fillStyle = `rgba(34, 211, 238, ${this.alpha})`;
+                } else {
+                    ctx.fillStyle = `rgba(168, 85, 247, ${this.alpha})`;
+                }
+                
+                ctx.fill();
+            }
+        }
+
+        // Inicializar Partículas
+        function initParticles() {
+            particles = [];
+            const numberOfParticles = (width * height) / 9000; // Densidade responsiva
+            for (let i = 0; i < numberOfParticles; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, width, height);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            requestAnimationFrame(animateParticles);
+        }
+
+        initParticles();
+        animateParticles();
+
+
+        // --- 2. Lógica do Loader (UI/UX) ---
+        const progressCircle = document.getElementById('progressCircle');
+        const percentageText = document.getElementById('percentageText');
+        const statusText = document.getElementById('statusText');
+        const processId = document.getElementById('processId');
+        const bottomBar = document.getElementById('bottomBar');
+        const loaderContainer = document.getElementById('loaderContainer');
+        const appContent = document.getElementById('appContent');
+
+        // Circunferência para cálculo do dashoffset
+        const radius = progressCircle.r.baseVal.value;
+        const circumference = radius * 2 * Math.PI;
+
+        progressCircle.style.strokeDasharray = `${circumference} ${circumference}`;
+        progressCircle.style.strokeDashoffset = circumference;
+
+        function setProgress(percent) {
+            const offset = circumference - (percent / 100) * circumference;
+            progressCircle.style.strokeDashoffset = offset;
+            percentageText.textContent = `${Math.round(percent)}%`;
+            bottomBar.style.width = `${percent}%`;
+        }
+
+        // Mensagens de carregamento para manter o usuário entretido
+        const messages = [
+            "Estabelecendo conexão segura...",
+            "Calibrando o núcleo de renderização...",
+            "Carregando texturas de alta resolução...",
+            "Otimizando experiência do usuário...",
+            "Sintonizando frequências...",
+            "Quase lá..."
+        ];
+
+        let progress = 0;
+        let messageIndex = 0;
+
+        // Simulador de carregamento não-linear (Mais realístico)
+        function simulateLoading() {
+            // Randomiza o ID do processo para dar um ar "técnico"
+            processId.innerText = `X9-${Math.floor(Math.random() * 900) + 100}`;
+
+            // Lógica de incremento variável
+            let increment = Math.random() * 1.5;
+            
+            // Fica mais lento perto do final (Cria antecipação)
+            if (progress > 70) increment = Math.random() * 0.5;
+            if (progress > 90) increment = Math.random() * 0.2;
+            
+            // Saltos ocasionais (Simula carregamento de assets grandes)
+            if (Math.random() < 0.02) increment += 5;
+
+            progress += increment;
+
+            // Troca de mensagens baseada no progresso
+            if (progress > 20 && messageIndex === 0) { statusText.innerText = messages[1]; messageIndex++; }
+            if (progress > 40 && messageIndex === 1) { statusText.innerText = messages[2]; messageIndex++; }
+            if (progress > 60 && messageIndex === 2) { statusText.innerText = messages[3]; messageIndex++; }
+            if (progress > 80 && messageIndex === 3) { statusText.innerText = messages[4]; messageIndex++; }
+            if (progress > 95 && messageIndex === 4) { statusText.innerText = messages[5]; messageIndex++; }
+
+            if (progress >= 100) {
+                progress = 100;
+                finishLoading();
+            } else {
+                setProgress(progress);
+                requestAnimationFrame(simulateLoading);
+            }
+        }
+
+        function finishLoading() {
+            setProgress(100);
+            statusText.innerText = "Sistema Online";
+            statusText.classList.add("text-green-400");
+            
+            // Transição suave para o conteúdo
+            setTimeout(() => {
+                loaderContainer.style.opacity = '0';
+                loaderContainer.style.transform = 'scale(0.95)'; // Efeito "zoom out" suave
+                
+                setTimeout(() => {
+                    loaderContainer.style.display = 'none';
+                    appContent.classList.remove('hidden');
+                }, 700); // Espera a animação CSS terminar
+            }, 800); // Pequeno delay no 100% para satisfação
+        }
+
+        // Iniciar
+        setTimeout(simulateLoading, 500);
+
+    </script>
+</body>
+</html>

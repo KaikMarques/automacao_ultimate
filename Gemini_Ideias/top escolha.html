@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transfer Pricing Loader</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* Scrollbar customizada e invisível para o log */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Animações */
+        .fade-enter {
+            animation: slideIn 0.4s ease-out forwards;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fact-transition {
+            transition: opacity 0.6s ease-in-out, transform 0.6s ease-in-out;
+        }
+
+        /* Linha de progresso no topo */
+        .progress-line {
+            transition: width 0.2s linear;
+        }
+
+        /* Overlay final */
+        #finalOverlay {
+            background: #0f172a;
+            transition: opacity 1s ease-in-out;
+            pointer-events: none;
+        }
+
+        /* Efeito de digitação */
+        .blinking-cursor::after {
+            content: '|';
+            animation: blink 1s step-start infinite;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+    </style>
+</head>
+<body class="bg-slate-950 h-screen w-screen relative flex flex-col">
+
+    <!-- Barra de Progresso Superior -->
+    <div class="w-full h-1 bg-slate-800 fixed top-0 left-0 z-50">
+        <div id="topProgressBar" class="h-full bg-cyan-500 w-0 progress-line shadow-[0_0_10px_rgba(34,211,238,0.5)]"></div>
+    </div>
+
+    <!-- Canvas Sutil no Fundo (Apenas poeira, sem palavras) -->
+    <canvas id="bgCanvas" class="absolute inset-0 z-0 opacity-30 pointer-events-none"></canvas>
+
+    <!-- Conteúdo Principal do Loader -->
+    <div id="loaderLayout" class="relative z-10 flex-1 flex flex-col md:flex-row w-full h-full max-w-7xl mx-auto p-6 md:p-12 gap-8 md:gap-16 transition-opacity duration-700">
+        
+        <!-- LADO ESQUERDO: Processamento de Arquivos -->
+        <div class="flex-1 flex flex-col justify-end md:justify-center order-2 md:order-1 relative border-t md:border-t-0 md:border-r border-slate-800/50 pt-6 md:pt-0 md:pr-12">
+            
+            <div class="absolute top-0 left-0 text-xs font-mono text-slate-500 uppercase tracking-widest mb-4">
+                <span class="w-2 h-2 inline-block bg-green-500 rounded-full mr-2 animate-pulse"></span>
+                System Log
+            </div>
+
+            <!-- Lista de Arquivos (Container com Overflow) -->
+            <div class="h-64 md:h-96 w-full flex flex-col justify-end overflow-hidden mask-gradient-b">
+                <ul id="fileList" class="space-y-3 font-mono text-sm">
+                    <!-- Itens serão injetados aqui -->
+                </ul>
+            </div>
+            
+            <div class="mt-4 flex justify-between items-center border-t border-slate-800 pt-4">
+                <span class="text-xs text-slate-500">Status: <span class="text-cyan-400">Processing Data</span></span>
+                <span id="percentageDisplay" class="text-xl font-bold font-mono text-white">0%</span>
+            </div>
+        </div>
+
+        <!-- LADO DIREITO: Informações e Insights -->
+        <div class="flex-1 flex flex-col justify-center order-1 md:order-2">
+            <div class="h-full flex flex-col justify-center relative">
+                
+                <h2 class="text-xs font-bold text-cyan-500 uppercase tracking-widest mb-6">Insight do Dia</h2>
+                
+                <div id="factContainer" class="relative min-h-[200px]">
+                    <h1 id="factTitle" class="text-3xl md:text-5xl font-light text-white mb-6 leading-tight fact-transition opacity-0 translate-y-4">
+                        <!-- Título do Fato -->
+                    </h1>
+                    <p id="factBody" class="text-slate-400 text-lg md:text-xl leading-relaxed fact-transition opacity-0 translate-y-4">
+                        <!-- Corpo do Fato -->
+                    </p>
+                </div>
+
+                <!-- Indicadores de slide -->
+                <div class="flex space-x-2 mt-8" id="slideIndicators">
+                    <div class="w-2 h-2 rounded-full bg-white opacity-100"></div>
+                    <div class="w-2 h-2 rounded-full bg-slate-700"></div>
+                    <div class="w-2 h-2 rounded-full bg-slate-700"></div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Overlay Final (Preto) -->
+    <div id="finalOverlay" class="fixed inset-0 z-40 opacity-0 pointer-events-none flex items-center justify-center"></div>
+
+    <!-- Conteúdo da App (Dashboard) -->
+    <div id="appContent" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950">
+        <div class="text-center fade-enter">
+            <h1 class="text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-purple-500">Dashboard</h1>
+            <p class="text-slate-400 mb-8">Ambiente carregado com sucesso.</p>
+            <button onclick="window.location.reload()" class="px-8 py-3 border border-slate-700 hover:border-white hover:bg-white/5 rounded transition-all text-sm uppercase tracking-widest">
+                Recarregar
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. DADOS ---
+        
+        const filesToProcess = [
+            "config_init.json", "auth_module.js", "tp_policies_2024.pdf", 
+            "master_file_structure.xml", "oecd_guidelines_v2.db", "intercompany_agreements.docx",
+            "benchmark_study_usa.xlsx", "benchmark_study_eu.xlsx", "benchmark_study_latam.xlsx",
+            "entity_characterization.json", "func_analysis_report.pdf", "risk_matrix.csv",
+            "comparability_adjustment.py", "arms_length_range.calc", "financial_data_2023.sql",
+            "profit_split_method.algo", "cup_method_data.raw", "tnmm_calculations.xls",
+            "cbc_report_generating.log", "tax_treaty_list.json", "safe_harbour_rules.xml",
+            "dempe_analysis.doc", "intangibles_register.db", "royalty_rates.csv",
+            "cost_plus_markup.calc", "resale_price_margin.calc", "audit_trail.log",
+            "final_compliance_check.exe", "dashboard_assets_ui.png", "user_permissions.auth"
+        ];
+
+        const facts = [
+            {
+                title: "Princípio Arm's Length",
+                body: "A pedra angular do Transfer Pricing. Determina que transações entre partes relacionadas devem ocorrer como se fossem realizadas entre entidades independentes sob circunstâncias comparáveis."
+            },
+            {
+                title: "BEPS Pillar Two",
+                body: "Uma iniciativa da OCDE para combater a erosão da base tributária, estabelecendo uma alíquota mínima global de imposto corporativo de 15% para grandes multinacionais."
+            },
+            {
+                title: "Documentação em Três Níveis",
+                body: "Para garantir transparência, muitas jurisdições exigem o Master File (visão global), Local File (transações locais) e o Country-by-Country Report (alocação de lucros)."
+            },
+            {
+                title: "Análise DEMPE",
+                body: "Crucial para intangíveis. Foca no Desenvolvimento, Melhoria, Manutenção, Proteção e Exploração para determinar quem tem direito aos lucros gerados por ativos intangíveis."
+            }
+        ];
+
+        // --- 2. LÓGICA VISUAL (CANVAS BACKGROUND) ---
+        // Apenas poeira sutil para dar vida, sem roubar a cena
+        const canvas = document.getElementById('bgCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let particles = [];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            initParticles();
+        }
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.vy = (Math.random() - 0.5) * 0.5;
+                this.vx = (Math.random() - 0.5) * 0.5;
+                this.size = Math.random() * 1.5;
+                this.alpha = Math.random() * 0.3 + 0.1;
+            }
+            update() {
+                this.x += this.vx; this.y += this.vy;
+                if(this.x < 0) this.x = width; if(this.x > width) this.x = 0;
+                if(this.y < 0) this.y = height; if(this.y > height) this.y = 0;
+            }
+            draw() {
+                ctx.fillStyle = `rgba(148, 163, 184, ${this.alpha})`;
+                ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI*2); ctx.fill();
+            }
+        }
+
+        function initParticles() {
+            particles = [];
+            for(let i=0; i<50; i++) particles.push(new Particle());
+        }
+        function animateCanvas() {
+            ctx.clearRect(0,0,width,height);
+            particles.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(animateCanvas);
+        }
+        window.addEventListener('resize', resize);
+        resize();
+        animateCanvas();
+
+
+        // --- 3. LÓGICA DO LOADER ---
+        
+        const fileList = document.getElementById('fileList');
+        const percentageDisplay = document.getElementById('percentageDisplay');
+        const topProgressBar = document.getElementById('topProgressBar');
+        const factTitle = document.getElementById('factTitle');
+        const factBody = document.getElementById('factBody');
+        const loaderLayout = document.getElementById('loaderLayout');
+        const finalOverlay = document.getElementById('finalOverlay');
+        const appContent = document.getElementById('appContent');
+        const slideIndicators = document.getElementById('slideIndicators');
+
+        let progress = 0;
+        let fileIndex = 0;
+        let currentFactIndex = 0;
+
+        // Função para adicionar arquivo na lista
+        function addFileLog() {
+            if (fileIndex >= filesToProcess.length) fileIndex = 0; // Loop se precisar
+            const fileName = filesToProcess[fileIndex];
+            
+            const li = document.createElement('li');
+            li.className = "flex items-center gap-3 text-slate-400 fade-enter";
+            li.innerHTML = `
+                <svg class="w-4 h-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span class="flex-1 truncate">${fileName}</span>
+                <span class="text-[10px] uppercase text-slate-600">Done</span>
+            `;
+            
+            fileList.appendChild(li);
+            
+            // Mantém apenas os últimos 6 itens para não poluir
+            if (fileList.children.length > 7) {
+                fileList.removeChild(fileList.children[0]);
+            }
+            
+            fileIndex++;
+        }
+
+        // Função para trocar o fato (Insight)
+        function showFact(index) {
+            // Fade Out
+            factTitle.style.opacity = '0';
+            factTitle.style.transform = 'translateY(10px)';
+            factBody.style.opacity = '0';
+            factBody.style.transform = 'translateY(10px)';
+            
+            // Update dots
+            Array.from(slideIndicators.children).forEach((dot, i) => {
+                dot.classList.toggle('bg-white', i === index);
+                dot.classList.toggle('bg-slate-700', i !== index);
+                dot.classList.toggle('opacity-100', i === index);
+            });
+
+            setTimeout(() => {
+                // Change Text
+                factTitle.textContent = facts[index].title;
+                factBody.textContent = facts[index].body;
+                
+                // Fade In
+                factTitle.style.opacity = '1';
+                factTitle.style.transform = 'translateY(0)';
+                factBody.style.opacity = '1';
+                factBody.style.transform = 'translateY(0)';
+            }, 600); // Wait for fade out
+        }
+
+        // --- LOOP PRINCIPAL ---
+        
+        // Inicializa primeiro fato
+        showFact(0);
+        
+        // Intervalo para trocar fatos (a cada 4s)
+        setInterval(() => {
+            if (progress < 100) {
+                currentFactIndex = (currentFactIndex + 1) % facts.length;
+                showFact(currentFactIndex);
+            }
+        }, 4000);
+
+        // Intervalo para adicionar arquivos (velocidade variável)
+        function scheduleNextFile() {
+            if (progress >= 100) return;
+            addFileLog();
+            const delay = Math.random() * 300 + 100; // Entre 100ms e 400ms
+            setTimeout(scheduleNextFile, delay);
+        }
+        scheduleNextFile();
+
+        // Loop de Progresso
+        function updateProgress() {
+            // Incremento não linear
+            let increment = Math.random() * 0.5;
+            if (progress > 80) increment = 0.1; // Desacelera no final
+            
+            progress += increment;
+            
+            if (progress >= 100) {
+                progress = 100;
+                finishLoading();
+            } else {
+                // Atualiza UI
+                percentageDisplay.textContent = Math.floor(progress) + '%';
+                topProgressBar.style.width = progress + '%';
+                requestAnimationFrame(updateProgress);
+            }
+        }
+        // Inicia
+        requestAnimationFrame(updateProgress);
+
+
+        function finishLoading() {
+            percentageDisplay.textContent = "100%";
+            topProgressBar.style.width = "100%";
+            
+            // Sequência de finalização
+            setTimeout(() => {
+                // Fade out no loader
+                loaderLayout.style.opacity = '0';
+                loaderLayout.style.transform = 'scale(0.98)';
+                
+                // Escurecer tela
+                finalOverlay.style.opacity = '1';
+                finalOverlay.style.pointerEvents = 'auto';
+
+                setTimeout(() => {
+                    loaderLayout.style.display = 'none';
+                    appContent.classList.remove('hidden');
+                    
+                    // Fade in final content happens via CSS class on appContent inner div
+                }, 1000);
+            }, 800);
+        }
+
+    </script>
+</body>
+</html>

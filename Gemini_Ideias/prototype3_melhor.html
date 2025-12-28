@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Experiência de Carregamento Imersiva</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; /* Slate 900 fallback */
+            overflow: hidden; /* Impede scroll durante o loading */
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Efeito de brilho suave no texto */
+        .glow-text {
+            text-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+        }
+
+        /* Animação personalizada para o círculo de progresso */
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        
+        /* Fade in suave para o conteúdo final */
+        .fade-in {
+            animation: fadeIn 1s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-white h-screen w-screen relative">
+
+    <!-- Canvas para Partículas de Fundo -->
+    <canvas id="particleCanvas" class="absolute inset-0 z-0 pointer-events-none"></canvas>
+
+    <!-- Camada de Vinheta para foco central -->
+    <div class="absolute inset-0 z-0 bg-radial-gradient from-transparent to-slate-950 opacity-80 pointer-events-none"></div>
+
+    <!-- Container Central do Loading -->
+    <div id="loaderContainer" class="relative z-10 flex flex-col items-center justify-center h-full w-full transition-opacity duration-700">
+        
+        <!-- O Núcleo do Loader -->
+        <div class="relative mb-12 group">
+            <!-- Efeito de brilho de fundo (Blur) -->
+            <div class="absolute -inset-4 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-full opacity-20 blur-2xl group-hover:opacity-30 transition-opacity duration-500 animate-pulse"></div>
+            
+            <!-- SVG do Anel de Progresso -->
+            <div class="relative w-40 h-40">
+                <svg class="w-full h-full" viewBox="0 0 100 100">
+                    <!-- Trilha de fundo -->
+                    <circle 
+                        class="text-slate-800 stroke-current" 
+                        stroke-width="4" 
+                        cx="50" 
+                        cy="50" 
+                        r="45" 
+                        fill="transparent"
+                    ></circle>
+                    <!-- Barra de progresso -->
+                    <circle 
+                        id="progressCircle"
+                        class="text-cyan-400 stroke-current progress-ring__circle drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]" 
+                        stroke-width="4" 
+                        stroke-linecap="round"
+                        cx="50" 
+                        cy="50" 
+                        r="45" 
+                        fill="transparent" 
+                        stroke-dasharray="282.743" 
+                        stroke-dashoffset="282.743"
+                    ></circle>
+                </svg>
+
+                <!-- Percentual Central -->
+                <div class="absolute inset-0 flex items-center justify-center flex-col">
+                    <span id="percentageText" class="text-3xl font-bold font-mono text-white tracking-tighter">0%</span>
+                    <div class="h-1 w-1 bg-purple-500 rounded-full mt-2 animate-ping"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Texto de Status Dinâmico -->
+        <div class="text-center h-16">
+            <p id="statusText" class="text-lg text-slate-300 font-light tracking-wide glow-text">Inicializando sistema...</p>
+            <p class="text-xs text-slate-500 font-mono mt-2 uppercase tracking-widest">Process ID: <span id="processId">X9-204</span></p>
+        </div>
+
+        <!-- Barra decorativa inferior -->
+        <div class="mt-8 w-64 h-1 bg-slate-800 rounded-full overflow-hidden relative">
+            <div id="bottomBar" class="absolute left-0 top-0 h-full bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500 w-0 transition-all duration-300"></div>
+        </div>
+    </div>
+
+    <!-- Conteúdo da "App" (Escondido inicialmente) -->
+    <div id="appContent" class="hidden relative z-10 flex flex-col items-center justify-center h-full w-full">
+        <div class="bg-slate-900/50 backdrop-blur-xl border border-slate-700/50 p-12 rounded-3xl shadow-2xl text-center max-w-md mx-4 fade-in">
+            <div class="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+            </div>
+            <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400 mb-4">Bem-vindo</h1>
+            <p class="text-slate-400 mb-8 leading-relaxed">O ambiente foi carregado com sucesso. Todos os módulos estão operacionais e prontos para uso.</p>
+            <button onclick="window.location.reload()" class="px-8 py-3 bg-white text-slate-900 rounded-full font-semibold hover:bg-cyan-50 hover:scale-105 transition-all duration-300 shadow-[0_0_20px_rgba(255,255,255,0.3)]">
+                Reiniciar Experiência
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. Configuração do Canvas (Palavras e Partículas) ---
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        
+        // Listas separadas para Palavras e Poeira (Dust)
+        let words = [];
+        let dustParticles = [];
+        
+        let mouse = { x: null, y: null };
+
+        // Lista de termos
+        const accountingWords = [
+            "Transfer Pricing", "Arm's Length", "BEPS", "OECD", "Compliance",
+            "Benchmark", "Intercompany", "Profit Split", "CUP Method", "Cost Plus",
+            "Resale Price", "TNMM", "Royalty", "Dividend", "Markup",
+            "Functional Analysis", "Economic Analysis", "Comparability",
+            "Unilateral APA", "Bilateral APA", "Multilateral", "MAP", "Safe Harbour", 
+            "Thin Cap", "Controlled Tx", "Tested Party", "PLI", 
+            "Berry Ratio", "Interquartile Range", "Value Chain", 
+            "Restructuring", "Permanent Establishment", "Corresponding Adjustment",
+            "Primary Adjustment", "Secondary Adjustment", "Nexus Approach",
+            "Substance", "Entity Characterization", "Risk Mitigation",
+            "Digital Economy", "Pillar One", "Pillar Two", "CbC Reporting", 
+            "Master File", "Local File", "Aggressive Tax", "Double Taxation",
+            "Tax Treaty", "Customs Valuation", "Risk Assumption", "DEMPE",
+            "Intangibles", "Marketing Intangibles", "Trade Intangibles",
+            "Ledger", "Audit", "Taxation", "Asset", "Liability",
+            "Equity", "Balance Sheet", "Forecast", "EBITDA", "Margin",
+            "Risk Analysis", "Documentation", "Withholding Tax", "Revenue", 
+            "Capex", "Opex", "Cash Flow", "Turnover", "Overhead"
+        ];
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            initBackgroundWords();
+        }
+        window.addEventListener('resize', resize);
+        
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.x;
+            mouse.y = e.y;
+        });
+
+        window.addEventListener('mouseleave', () => {
+            mouse.x = null;
+            mouse.y = null;
+        });
+
+        // --- CLASSE 1: PALAVRA (Estática até dissolver) ---
+        class Word {
+            constructor(x, y) {
+                this.x = x !== undefined ? x : Math.random() * (width - 100) + 50;
+                this.y = y !== undefined ? y : Math.random() * (height - 50) + 25;
+                
+                this.text = accountingWords[Math.floor(Math.random() * accountingWords.length)];
+                this.fontSize = Math.floor(Math.random() * 4) + 11; 
+                this.font = `${this.fontSize}px 'JetBrains Mono'`;
+                
+                // Medidas para a dissolução
+                ctx.font = this.font;
+                this.width = ctx.measureText(this.text).width;
+                
+                this.alpha = 0;
+                this.maxAlpha = Math.random() * 0.4 + 0.15; // Visibilidade sutil
+                this.state = 'appearing'; // appearing, stable, dissolving
+                this.dissolveSpeed = 0.05;
+            }
+
+            update() {
+                if (this.state === 'appearing') {
+                    this.alpha += 0.01;
+                    if (this.alpha >= this.maxAlpha) this.state = 'stable';
+                }
+                else if (this.state === 'dissolving') {
+                    this.alpha -= this.dissolveSpeed;
+                }
+            }
+
+            draw() {
+                if (this.alpha <= 0) return;
+                
+                ctx.font = this.font;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                // Cor suave (Slate/Cinza)
+                ctx.fillStyle = `rgba(168, 180, 200, ${this.alpha})`;
+                ctx.fillText(this.text, this.x, this.y);
+            }
+        }
+
+        // --- CLASSE 2: POEIRA (Partícula Suave de Dissolução) ---
+        class Dust {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                // Movimento muito suave e lento (drift)
+                this.vx = (Math.random() - 0.5) * 0.5; 
+                this.vy = (Math.random() - 1.0) * 0.5; // Tende a subir um pouco
+                
+                this.size = Math.random() * 1.5 + 0.5;
+                this.alpha = Math.random() * 0.5 + 0.3;
+                this.decay = Math.random() * 0.02 + 0.01; // Desaparece devagar
+                
+                // Cor levemente baseada no tema
+                this.color = Math.random() > 0.5 ? '200, 220, 255' : '168, 180, 200';
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.alpha -= this.decay;
+            }
+
+            draw() {
+                if (this.alpha <= 0) return;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${this.color}, ${this.alpha})`;
+                ctx.fill();
+            }
+        }
+
+        // Funções de Gerenciamento
+        function initBackgroundWords() {
+            words = [];
+            // Preenche a tela com palavras estáticas
+            const count = (width * height) / 10000;
+            for (let i = 0; i < count; i++) {
+                words.push(new Word());
+            }
+        }
+
+        function dissolveWord(index) {
+            const word = words[index];
+            word.state = 'dissolving';
+            
+            // Cria efeito de poeira ao longo da largura da palavra
+            // Simula as "letras se desfazendo"
+            const particleCount = Math.floor(word.width / 3); 
+            const startX = word.x - (word.width / 2);
+            
+            for(let i=0; i < particleCount; i++) {
+                // Espalha partículas na área onde o texto estava
+                const pX = startX + Math.random() * word.width;
+                const pY = word.y + (Math.random() - 0.5) * 10;
+                dustParticles.push(new Dust(pX, pY));
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+
+            // 1. Gerenciar Palavras
+            for (let i = words.length - 1; i >= 0; i--) {
+                const w = words[i];
+                w.update();
+                w.draw();
+
+                // Se a palavra sumiu completamente, remove e cria outra em lugar aleatório
+                if (w.state === 'dissolving' && w.alpha <= 0) {
+                    words.splice(i, 1);
+                    // Respawn para manter a densidade (opcional, mas bom para não esvaziar a tela)
+                    words.push(new Word()); 
+                    continue;
+                }
+
+                // Checar interação com o mouse (apenas se estiver estável)
+                if (w.state === 'stable' && mouse.x != null) {
+                    // Caixa de colisão simples
+                    const dx = Math.abs(mouse.x - w.x);
+                    const dy = Math.abs(mouse.y - w.y);
+                    
+                    // Se o mouse passar por cima (considerando largura da palavra)
+                    if (dx < w.width / 2 + 10 && dy < 15) {
+                        dissolveWord(i);
+                    }
+                }
+            }
+
+            // 2. Gerenciar Poeira (Dust)
+            for (let i = dustParticles.length - 1; i >= 0; i--) {
+                const d = dustParticles[i];
+                d.update();
+                d.draw();
+                if (d.alpha <= 0) {
+                    dustParticles.splice(i, 1);
+                }
+            }
+            
+            // Limite de segurança
+            if (dustParticles.length > 500) dustParticles.splice(0, 50);
+
+            requestAnimationFrame(animate);
+        }
+
+        // Iniciar
+        resize();
+        animate();
+
+
+        // --- 2. Lógica do Loader (Mantida) ---
+        const progressCircle = document.getElementById('progressCircle');
+        const percentageText = document.getElementById('percentageText');
+        const statusText = document.getElementById('statusText');
+        const processId = document.getElementById('processId');
+        const bottomBar = document.getElementById('bottomBar');
+        const loaderContainer = document.getElementById('loaderContainer');
+        const appContent = document.getElementById('appContent');
+
+        const radius = progressCircle.r.baseVal.value;
+        const circumference = radius * 2 * Math.PI;
+
+        progressCircle.style.strokeDasharray = `${circumference} ${circumference}`;
+        progressCircle.style.strokeDashoffset = circumference;
+
+        function setProgress(percent) {
+            const offset = circumference - (percent / 100) * circumference;
+            progressCircle.style.strokeDashoffset = offset;
+            percentageText.textContent = `${Math.round(percent)}%`;
+            bottomBar.style.width = `${percent}%`;
+        }
+
+        const messages = [
+            "Validating Transfer Pricing models...",
+            "Analyzing Intercompany transactions...",
+            "Checking BEPS compliance...",
+            "Benchmarking financial data...",
+            "Generating Master File...",
+            "Finalizing report..."
+        ];
+
+        let progress = 0;
+        let messageIndex = 0;
+
+        function simulateLoading() {
+            processId.innerText = `TP-${Math.floor(Math.random() * 900) + 100}`;
+
+            let increment = Math.random() * 1.5;
+            
+            if (progress > 70) increment = Math.random() * 0.5;
+            if (progress > 90) increment = Math.random() * 0.2;
+            
+            if (Math.random() < 0.02) increment += 5;
+
+            progress += increment;
+
+            if (progress > 20 && messageIndex === 0) { statusText.innerText = messages[1]; messageIndex++; }
+            if (progress > 40 && messageIndex === 1) { statusText.innerText = messages[2]; messageIndex++; }
+            if (progress > 60 && messageIndex === 2) { statusText.innerText = messages[3]; messageIndex++; }
+            if (progress > 80 && messageIndex === 3) { statusText.innerText = messages[4]; messageIndex++; }
+            if (progress > 95 && messageIndex === 4) { statusText.innerText = messages[5]; messageIndex++; }
+
+            if (progress >= 100) {
+                progress = 100;
+                finishLoading();
+            } else {
+                setProgress(progress);
+                requestAnimationFrame(simulateLoading);
+            }
+        }
+
+        function finishLoading() {
+            setProgress(100);
+            statusText.innerText = "Compliance Verified";
+            statusText.classList.add("text-green-400");
+            
+            setTimeout(() => {
+                loaderContainer.style.opacity = '0';
+                loaderContainer.style.transform = 'scale(0.95)';
+                
+                setTimeout(() => {
+                    loaderContainer.style.display = 'none';
+                    appContent.classList.remove('hidden');
+                }, 700);
+            }, 800);
+        }
+
+        setTimeout(simulateLoading, 500);
+
+    </script>
+</body>
+</html>

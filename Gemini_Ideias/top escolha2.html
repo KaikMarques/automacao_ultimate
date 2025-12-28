@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transfer Pricing Loader - macOS Style</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #000;
+            background-image: url("https://images.unsplash.com/photo-1620121692029-d088224ddc74?q=80&w=2832&auto=format&fit=crop"); /* Wallpaper abstrato estilo macOS */
+            background-size: cover;
+            background-position: center;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* Scrollbar invisível */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Utilitários de Animação */
+        .fade-enter { animation: slideIn 0.3s ease-out forwards; }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .fact-transition { transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out; }
+
+        /* Glassmorphism da Janela */
+        .mac-window {
+            background: rgba(30, 41, 59, 0.65); /* Slate-900 com transparência */
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Sidebar do Terminal */
+        .mac-sidebar {
+            background: rgba(15, 23, 42, 0.4);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Barra de Progresso estilo Safari */
+        .safari-progress {
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        #finalOverlay {
+            background: #000;
+            transition: opacity 1.2s ease-in-out;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen relative flex items-center justify-center">
+
+    <!-- Overlay Final -->
+    <div id="finalOverlay" class="fixed inset-0 z-50 opacity-0 pointer-events-none flex items-center justify-center"></div>
+
+    <!-- Conteúdo Principal: Janela macOS -->
+    <div id="loaderLayout" class="relative z-10 w-full max-w-5xl h-[600px] mx-4 md:mx-0 transition-all duration-700 transform scale-100">
+        
+        <div class="mac-window w-full h-full rounded-xl flex flex-col overflow-hidden">
+            
+            <!-- Barra de Título (Title Bar) -->
+            <div class="h-10 bg-slate-900/40 border-b border-white/5 flex items-center px-4 justify-between shrink-0">
+                <!-- Botões Semáforo -->
+                <div class="flex gap-2">
+                    <div class="w-3 h-3 rounded-full bg-[#FF5F56] border border-[#E0443E]"></div>
+                    <div class="w-3 h-3 rounded-full bg-[#FFBD2E] border border-[#DEA123]"></div>
+                    <div class="w-3 h-3 rounded-full bg-[#27C93F] border border-[#1AAB29]"></div>
+                </div>
+                <!-- Título Central -->
+                <div class="text-xs font-medium text-slate-400">TP_Analyzer_Pro — v2.4.0</div>
+                <div class="w-14"></div> <!-- Espaçador para centralizar -->
+            </div>
+
+            <!-- Barra de Progresso (Logo abaixo do título) -->
+            <div class="w-full h-[2px] bg-slate-700/30">
+                <div id="topProgressBar" class="h-full bg-blue-500 w-0 safari-progress shadow-[0_0_8px_rgba(59,130,246,0.6)]"></div>
+            </div>
+
+            <!-- Corpo da Janela (Layout Dividido) -->
+            <div class="flex-1 flex overflow-hidden">
+                
+                <!-- LADO ESQUERDO: Terminal / Log (Sidebar) -->
+                <div class="w-1/3 min-w-[300px] mac-sidebar flex flex-col p-4">
+                    <div class="flex items-center gap-2 mb-4 px-2">
+                        <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span class="text-xs font-semibold text-slate-300 uppercase tracking-wide">Processing Queue</span>
+                    </div>
+
+                    <!-- Lista de Arquivos (Visual de Código) -->
+                    <div class="flex-1 overflow-hidden relative font-mono text-xs">
+                        <div class="absolute inset-0 mask-gradient-b">
+                            <ul id="fileList" class="space-y-2 text-slate-400">
+                                <!-- Itens injetados via JS -->
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Status Footer -->
+                    <div class="mt-4 pt-3 border-t border-white/5 flex justify-between items-end">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] text-slate-500 uppercase">Status</span>
+                            <span class="text-xs text-blue-400 animate-pulse">Running diagnostics...</span>
+                        </div>
+                        <span id="percentageDisplay" class="text-lg font-bold font-mono text-white">0%</span>
+                    </div>
+                </div>
+
+                <!-- LADO DIREITO: Conteúdo Visual (Main) -->
+                <div class="flex-1 flex flex-col justify-center items-center p-12 relative">
+                    <!-- Fundo sutil do lado direito -->
+                    <div class="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 pointer-events-none"></div>
+
+                    <div class="max-w-md text-center z-10">
+                        <div class="mb-6 inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-500 to-indigo-600 shadow-lg text-white">
+                            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                        </div>
+
+                        <h2 class="text-sm font-bold text-blue-400 uppercase tracking-widest mb-4">Did You Know?</h2>
+                        
+                        <div id="factContainer" class="min-h-[160px] flex flex-col justify-center">
+                            <h1 id="factTitle" class="text-2xl md:text-3xl font-medium text-white mb-4 fact-transition opacity-0 translate-y-2">
+                                <!-- Título -->
+                            </h1>
+                            <p id="factBody" class="text-slate-300 text-sm md:text-base leading-relaxed fact-transition opacity-0 translate-y-2">
+                                <!-- Corpo -->
+                            </p>
+                        </div>
+                        
+                        <!-- Dots estilo iOS -->
+                        <div class="flex justify-center space-x-2 mt-8" id="slideIndicators">
+                            <div class="w-1.5 h-1.5 rounded-full bg-white transition-all duration-300"></div>
+                            <div class="w-1.5 h-1.5 rounded-full bg-white/20 transition-all duration-300"></div>
+                            <div class="w-1.5 h-1.5 rounded-full bg-white/20 transition-all duration-300"></div>
+                            <div class="w-1.5 h-1.5 rounded-full bg-white/20 transition-all duration-300"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Conteúdo da App (Dashboard) -->
+    <div id="appContent" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black">
+        <div class="text-center fade-enter relative z-10">
+            <!-- Ícone App -->
+            <div class="mx-auto w-24 h-24 bg-gradient-to-tr from-blue-600 to-purple-600 rounded-[22px] shadow-2xl flex items-center justify-center mb-6">
+                <svg class="w-12 h-12 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+            </div>
+            
+            <h1 class="text-4xl font-semibold text-white mb-2">Transfer Pricing Dashboard</h1>
+            <p class="text-slate-400 mb-8 font-light">Welcome back, Administrator.</p>
+            
+            <button onclick="window.location.reload()" class="px-6 py-2 bg-white/10 border border-white/20 hover:bg-white/20 text-white rounded-lg text-sm font-medium transition-all backdrop-blur-md">
+                Open Project
+            </button>
+        </div>
+        
+        <!-- Fundo abstrato do app -->
+        <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1620121692029-d088224ddc74?q=80&w=2832&auto=format&fit=crop')] bg-cover bg-center opacity-30 blur-3xl"></div>
+    </div>
+
+    <script>
+        // --- DADOS ---
+        const filesToProcess = [
+            "fetching_config.json ...", "verifying_auth_token ... OK", "loading_tp_policies.pdf", 
+            "parsing_master_file.xml", "connecting_oecd_db ... OK", "scanning_intercompany_docs",
+            "analyzing_benchmark_usa.xlsx", "analyzing_benchmark_eu.xlsx", "analyzing_benchmark_latam.xlsx",
+            "characterizing_entities ...", "generating_func_analysis", "calculating_risk_metrics",
+            "applying_adjustments.py", "computing_arms_length_range", "querying_financials_2023",
+            "profit_split_algo_v2", "validating_cup_data", "tnmm_sanity_check",
+            "generating_cbc_report", "checking_tax_treaties", "safe_harbour_rules.xml",
+            "dempe_matrix_check", "intangibles_valuation", "royalty_rates_check",
+            "finalizing_cost_plus", "resale_margin_verify", "audit_log_write ... OK",
+            "security_check_pass", "ui_assets_load", "ready_state_init"
+        ];
+
+        const facts = [
+            {
+                title: "Princípio Arm's Length",
+                body: "A base do Transfer Pricing. Transações entre partes relacionadas devem simular condições de mercado aberto para garantir justiça fiscal."
+            },
+            {
+                title: "Pillar Two (Global Tax)",
+                body: "A nova regra global da OCDE que define um imposto corporativo mínimo de 15% para grandes multinacionais, redefinindo o planejamento tributário."
+            },
+            {
+                title: "Compliance em 3 Níveis",
+                body: "Master File (visão global), Local File (detalhes locais) e CbC Report (alocação de lucros). A trindade da transparência fiscal."
+            },
+            {
+                title: "Análise DEMPE",
+                body: "Quem desenvolve, melhora, mantém, protege e explora intangíveis? Essa análise define quem tem direito aos lucros econômicos."
+            }
+        ];
+
+        // --- REFERÊNCIAS DOM ---
+        const fileList = document.getElementById('fileList');
+        const percentageDisplay = document.getElementById('percentageDisplay');
+        const topProgressBar = document.getElementById('topProgressBar');
+        const factTitle = document.getElementById('factTitle');
+        const factBody = document.getElementById('factBody');
+        const loaderLayout = document.getElementById('loaderLayout');
+        const finalOverlay = document.getElementById('finalOverlay');
+        const appContent = document.getElementById('appContent');
+        const slideIndicators = document.getElementById('slideIndicators');
+
+        let progress = 0;
+        let fileIndex = 0;
+        let currentFactIndex = 0;
+
+        // --- FUNÇÕES ---
+
+        function addFileLog() {
+            if (fileIndex >= filesToProcess.length) fileIndex = 0;
+            const fileName = filesToProcess[fileIndex];
+            
+            const li = document.createElement('li');
+            li.className = "flex items-center gap-2 fade-enter";
+            // Ícone de arquivo ou check dependendo do texto
+            const isDone = fileName.includes("OK") || fileName.includes("pass") || fileName.includes("ready");
+            const iconColor = isDone ? "text-green-400" : "text-slate-500";
+            const iconPath = isDone 
+                ? "M5 13l4 4L19 7" 
+                : "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z";
+
+            li.innerHTML = `
+                <svg class="w-3 h-3 ${iconColor} shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${iconPath}" />
+                </svg>
+                <span class="truncate ${isDone ? 'text-slate-300' : ''}">${fileName}</span>
+            `;
+            
+            fileList.appendChild(li);
+            
+            // Auto scroll
+            const container = fileList.parentElement.parentElement; // div overflow
+            container.scrollTop = container.scrollHeight;
+
+            if (fileList.children.length > 12) {
+                fileList.removeChild(fileList.children[0]);
+            }
+            
+            fileIndex++;
+        }
+
+        function showFact(index) {
+            factTitle.style.opacity = '0';
+            factTitle.style.transform = 'translateY(10px)';
+            factBody.style.opacity = '0';
+            factBody.style.transform = 'translateY(10px)';
+            
+            // Dots
+            Array.from(slideIndicators.children).forEach((dot, i) => {
+                if (i === index) {
+                    dot.className = "w-1.5 h-1.5 rounded-full bg-white transition-all duration-300";
+                } else {
+                    dot.className = "w-1.5 h-1.5 rounded-full bg-white/20 transition-all duration-300";
+                }
+            });
+
+            setTimeout(() => {
+                factTitle.textContent = facts[index].title;
+                factBody.textContent = facts[index].body;
+                
+                factTitle.style.opacity = '1';
+                factTitle.style.transform = 'translateY(0)';
+                factBody.style.opacity = '1';
+                factBody.style.transform = 'translateY(0)';
+            }, 500);
+        }
+
+        // --- LOOP ---
+        
+        showFact(0);
+        
+        setInterval(() => {
+            if (progress < 100) {
+                currentFactIndex = (currentFactIndex + 1) % facts.length;
+                showFact(currentFactIndex);
+            }
+        }, 5000); // 5s por slide
+
+        function scheduleNextFile() {
+            if (progress >= 100) return;
+            addFileLog();
+            // Velocidade aleatória para parecer processamento real
+            const delay = Math.random() * 200 + 50; 
+            setTimeout(scheduleNextFile, delay);
+        }
+        scheduleNextFile();
+
+        function updateProgress() {
+            let increment = Math.random() * 0.4; // Progresso
+            if (progress > 90) increment = 0.05; // Lento no final
+            
+            progress += increment;
+            
+            if (progress >= 100) {
+                progress = 100;
+                finishLoading();
+            } else {
+                percentageDisplay.textContent = Math.floor(progress) + '%';
+                topProgressBar.style.width = progress + '%';
+                requestAnimationFrame(updateProgress);
+            }
+        }
+        requestAnimationFrame(updateProgress);
+
+
+        function finishLoading() {
+            percentageDisplay.textContent = "100%";
+            topProgressBar.style.width = "100%";
+            
+            // Efeito visual de conclusão
+            const statusText = document.querySelector('.animate-pulse');
+            if(statusText) {
+                statusText.classList.remove('animate-pulse', 'text-blue-400');
+                statusText.classList.add('text-green-400');
+                statusText.textContent = "System Ready";
+            }
+
+            setTimeout(() => {
+                // Janela fecha (Scale down + Opacity)
+                loaderLayout.style.transform = 'scale(0.8) translateY(20px)';
+                loaderLayout.style.opacity = '0';
+                
+                // Overlay escuro entra
+                finalOverlay.style.opacity = '1';
+                finalOverlay.style.pointerEvents = 'auto';
+
+                setTimeout(() => {
+                    loaderLayout.style.display = 'none';
+                    appContent.classList.remove('hidden');
+                }, 800);
+            }, 1000);
+        }
+
+    </script>
+</body>
+</html>
